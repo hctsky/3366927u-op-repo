@@ -1,1 +1,63 @@
 
+
+pipeline {
+      agent any
+      stages {
+          stage('Op-3366927u-S1') {
+          steps {
+            echo 'Continue from previous phase: Ready to deploy next environment.'
+            echo 'Stage 1 One'
+          }
+          }
+          stage('Op-3366927u-S2') {
+          steps {
+            '''input('Do you want to update to UAT container?')
+            echo 'Stage 2 Two'
+          }
+          }
+          stage('Op-3366927u-S3') {
+          steps {
+                 ''' sh '''#!/bin/bash
+                 ''' puppet resource file /tmp/clone ensure=absent force=true;
+                 ''' puppet resource file /tmp/clone ensure=directory;
+	               ''' cd /tmp/clone;
+	               ''' git clone https://github.com/hctsky/cdv1c04-devops_repo.git;
+                 ''' targets=puppetclient1.localdomain;
+                 ''' locate_script='/tmp/clone/cdv1c04-devops_repo/script_to_run';
+                 ''' bolt script run $locate_script -t $targets -u clientadm -p user123 --no-host-key-check --run-as root;
+                 '''
+                 echo "UAT container updated"
+                 echo 'Stage 3 Three'
+          }
+          }
+          stage('Op-3366927u-S4') {
+          steps {
+            '''input('Do you want to deploy to Production container?')
+               echo 'Stage 4 Four'
+          }
+          }
+          stage('Op-3366927u-S5') {
+          steps {
+                 ''' sh '''#!/bin/bash
+                 ''' targets=puppetclient2.localdomain;
+                 ''' locate_script='/tmp/clone/cdv1c04-devops_repo/script_to_run';
+                 ''' bolt script run $locate_script -t $targets -u clientadm -p user123 --no-host-key-check --run-as root;
+                 '''
+                 echo "Production container updated"
+                 echo 'Stage 5 Five'
+          }
+          }
+          stage('Op-3366927u-S6') {
+          steps {
+            echo 'Completed updating to Production Container'
+            echo 'Stage 6 Six'
+          }
+          }
+          stage('Op-3366927u-S7') {
+          steps {
+            echo 'Completed updating to Production Container'
+            echo 'Stage 7 Seven'
+          }
+          }
+}
+}
