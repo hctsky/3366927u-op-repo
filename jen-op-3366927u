@@ -1,8 +1,17 @@
 pipeline {
       agent any
+	  environment {
+	      APP_NAME = "3366927u Jenkins Operate Pipeline"
+	      APP_ENV  = "CDV1C04 CWF"
+	  }
+
       stages {
           stage('Op-3366927u-S1') {
 	          steps {
+
+				cleanWs()
+
+
 	            echo 'Op-3366927u-S1: QA web server is backup and updated'
 
 	          }
