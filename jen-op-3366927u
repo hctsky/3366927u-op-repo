@@ -3,14 +3,14 @@ pipeline {
       stages {
           stage('Op-3366927u-S1') {
 	          steps {
-	            echo 'Continue from previous phase: Ready to deploy next environment.'
-	            echo 'Stage 1 One'
+	            echo 'Op-3366927u-S1: QA web server is backup and updated'
+
 	          }
           }
           stage('Op-3366927u-S2') {
 	          steps {
 	            //'''input('Do you want to update to UAT container?')
-	            echo 'Stage 2 Two'
+	            echo 'Op-3366927u-S2: Checking on whether QA server is running after update'
 	          }
           }
           stage('Op-3366927u-S3') {
@@ -26,14 +26,13 @@ pipeline {
 	                 ''' bolt script run $locate_script -t $targets -u clientadm -p user123 --no-host-key-check --run-as root;
 	                 '''
 		    	     */
-	                 echo "UAT container updated"
-	                 echo 'Stage 3 Three'
+	                 echo 'Op-3366927u-S3: QA server fails after update and is rolled back'
 	          }
           }
           stage('Op-3366927u-S4') {
 	          steps {
 	            	//'''input('Do you want to deploy to Production container?')
-	                echo 'Stage 4 Four'
+	                echo 'Op-3366927u-S4: prod web server is backup and updated'
 	          }
           }
           stage('Op-3366927u-S5') {
@@ -46,19 +45,19 @@ pipeline {
 	                 '''
 					 */
 	                 echo "Production container updated"
-	                 echo 'Stage 5 Five'
+	                 echo 'Op-3366927u-S5: Checking on whether Prod server is running after update'
 	          }
           }
           stage('Op-3366927u-S6') {
 	          steps {
 	            echo 'Completed updating to Production Container'
-	            echo 'Stage 6 Six'
+	            echo 'Op-3366927u-S6: Prod web server is rolled back'
 	          }
           }
           stage('Op-3366927u-S7') {
 	          steps {
 	            echo 'Completed updating to Production Container'
-	            echo 'Stage 7 Seven'
+	            echo 'Op-3366927u-S7: Prod web server is monitored and ready to serve'
 	          }
           }
 	}
