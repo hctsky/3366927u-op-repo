@@ -2,6 +2,8 @@
 #!/bin/bash
 export PATH=$PATH:/opt/puppetlabs/bin
 apt-get update
+puppet resource file /tmp/operate ensure=absent force=true
+puppet resource file /tmp/operate ensure=directory
 puppet resource file /tmp/operate/3366927u ensure=absent force=true
 puppet resource file /tmp/operate/3366927u ensure=directory
 cd /tmp/operate/3366927u
