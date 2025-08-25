@@ -32,8 +32,9 @@ pipeline {
           }
           stage('Op-3366927u-S2') {
 	          steps {
-	            //'''input('Do you want to update to UAT container?')
 // curl test qa svr
+				curl –Is http://localhost:33200|head –n 1 > /tmp/qa-result-file
+				cat /tmp/qa-result-file
 	            echo 'Op-3366927u-S2: Checking on whether QA server is running after update'
 	          }
           }
