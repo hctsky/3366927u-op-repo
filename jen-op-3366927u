@@ -73,7 +73,7 @@ pipeline {
 						
 						docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "cp /usr/share/apache2/default-site/index.html /var/www/html/index.html"
 
-						service apache2 restart
+						// service apache2 restart
 						'''
 						// remove qa svr container
 						sh 'docker rm -f 3366927u-qa-svr || true'
@@ -83,7 +83,7 @@ pipeline {
 		                    qa-bkup-image /usr/sbin/sshd -D
 		                '''	
 		//sh 'docker run --rm -v qa-volume:/var/www/html alpine sh -c "rm -f /var/www/html/index.html" '
-		//sh 'docker restart 3366927u-qa-svr'
+		sh 'docker restart 3366927u-qa-svr'
 
 echo 'Op-3366927u-S3: QA server fails after update and is rolled back'
 						// then use error('aborting') to abort rest of steps
