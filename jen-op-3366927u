@@ -33,7 +33,7 @@ pipeline {
           stage('Op-3366927u-S2') {
 	          steps {
 // curl test qa svr
-				sh 'curl –Is http://localhost:33200|head -n 1 > /tmp/qa-result-file'
+				sh 'curl -Is http://localhost:33200|head -n 1 > /tmp/qa-result-file'
 				sh 'cat /tmp/qa-result-file'
 	            echo 'Op-3366927u-S2: Checking on whether QA server is running after update'
 	          }
