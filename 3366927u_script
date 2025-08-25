@@ -11,6 +11,5 @@ puppet resource package git ensure=present
 puppet resource package apache2 ensure=present
 puppet resource service apache2 ensure=running
 git clone https://github.com/hctsky/3366927u-op-repo.git
-cp -p /var/www/html/index.html /var/www/html/index_original.html
 cp -p /tmp/operate/3366927u/3366927u-op-repo/index-op-3366927u.html /var/www/html/index.html
 
