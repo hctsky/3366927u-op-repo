@@ -43,6 +43,17 @@ pipeline {
 	          steps {
 				// proceed or rollback
 				script {
+			        activeChoiceParam(name: 'ACTION') {
+			            description('Choose an action')
+			            choiceType('RADIO')
+			            groovyScript {
+			                script = '''
+			                    return ["Deploy to Production Environment", "Rollback"]
+			                '''
+			                fallbackScript = 'return ["Rollback"]'
+			            }
+					v2 = ${params.ACTION}
+					/*
 					v2 = input ( 
 	                	message: 'Proceed or Abort?',
 						ok: 'Proceed',
@@ -50,6 +61,7 @@ pipeline {
 						submitter: 'Proceed to Roll out to Prod server, Roll back QA server'
 	                    //parameters: [choice(choices: ['Proceed to Roll out to Prod server', 'Roll back QA server'])]
 						)
+					*/
 					// if proceed			
 					if (v2 == 'Proceed to Roll out to Prod server'){
 	 					echo 'Op-3366927u-S3: Proceed to roll out to Prod server'
