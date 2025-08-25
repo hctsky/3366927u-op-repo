@@ -44,6 +44,7 @@ pipeline {
 				// proceed or rollback
 				script {
 					v2 = input ( 
+						id: 'S3_choice',
 	                	message: 'Proceed or Abort?',
 	                    parameters: [choice(choices: ['Proceed to Roll out to Prod server', 'Roll back QA server'])]
 						)
