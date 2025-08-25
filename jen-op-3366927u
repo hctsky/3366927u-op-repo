@@ -72,8 +72,7 @@ pipeline {
                         docker run --rm \
                           -v qa-volume:/var/www/html \
                           qa-bkup-image \
-						  sh -c "mv /var/www/html/index_original.html /var/www/html/index.html"  					      
-//sh -c "rm -f /var/www/html/index.html"
+						  sh -c "rm -f /var/www/html/index.html"
 						'''
 						
 						sh 'docker rm -f 3366927u-qa-svr || true'
