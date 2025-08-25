@@ -10,12 +10,16 @@ pipeline {
 	          steps {
 			  	cleanWs()
 
-// remove qa svr container
+				// remove qa svr container
 				sh 'docker rm -f 3366927u-qa-svr || true'
-// run another qa-svr from qa backup image
-				sh 'docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain --name 3366927u-qa-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 --mount source=qa-volume,target=/mnt/qa-volume qa-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND" '
 
-// use bolt command to update the html in qa svr
+				// run another qa-svr from qa backup image
+				sh '''docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain \
+				--name 3366927u-qa-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 \
+				--mount source=qa-volume,target=/mnt/qa-volume qa-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+				'''
+
+				// use bolt command to update the html in qa svr
 				sh '''#!/bin/bash
 				puppet resource file /tmp/clone ensure=absent force=true;
                 puppet resource file /tmp/clone ensure=directory;
@@ -42,19 +46,7 @@ pipeline {
           stage('Op-3366927u-S3') {
 	          steps {
 				// proceed or rollback
-				script {
-			        /*activeChoiceParam(name: 'ACTION') {
-			            description('Choose an action')
-			            choiceType('RADIO')
-			            groovyScript {
-			                script = '''
-			                    return ["Deploy to Production Environment", "Rollback"]
-			                '''
-			                fallbackScript = 'return ["Rollback"]'
-			            }
-					}
-					v2 = ${params.ACTION} */
-					
+				script {					
 					v2 = input ( 
 	                	message: 'ACTION',
 	                    parameters: [choice(name:'', choices: ['Proceed to Roll out to Prod server', 'Roll back QA server'])]
@@ -67,12 +59,13 @@ pipeline {
 					else if (v2 == 'Roll back QA server') {
 						// if rollback, then
 						// execute rollback of qa web svr by using qa-bkup-image
-						
-						sh '''
-                        docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "rm -f /var/www/html/index.html"
-						
-						docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "cp /usr/share/apache2/default-site/index.html /var/www/html/index.html"
-						'''
+
+						// first, remove index.html file, then replace it with the container default version
+						//sh '''
+                        //docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "rm -f /var/www/html/index.html"
+						//docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "cp /usr/share/apache2/default-site/index.html /var/www/html/index.html"
+						//'''
+
 						// remove qa svr container
 						sh 'docker rm -f 3366927u-qa-svr || true'
 						// run another qa-svr from qa backup image
@@ -80,20 +73,14 @@ pipeline {
 		                    --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 --mount source=qa-volume,target=/mnt/qa-volume \
 		                    qa-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
 		                '''	
-		//sh 'docker run --rm -v qa-volume:/var/www/html alpine sh -c "rm -f /var/www/html/index.html" '
-		sh 'docker restart 3366927u-qa-svr'
-
-echo 'Op-3366927u-S3: QA server fails after update and is rolled back'
-						// then use error('aborting') to abort rest of steps
 						
-		                error('aborting')
-	
-						}
+						//sh 'docker restart 3366927u-qa-svr'
+
+						echo 'Op-3366927u-S3: QA server fails after update and is rolled back'
+						// then use error('aborting') to abort rest of steps
+						error('aborting')
+					}
 				}
-
-
-        			
-
 	          }
           }
           stage('Op-3366927u-S4') {
