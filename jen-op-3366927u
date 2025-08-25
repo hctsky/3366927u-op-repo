@@ -13,10 +13,7 @@ pipeline {
 // remove qa svr container
 				sh 'docker rm -f 3366927u-qa-svr || true'
 // run another qa-svr from qa backup image
-				sh '''docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain --name 3366927u-qa-svr \
-                    --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 --mount source=qa-volume,target=/mnt/qa-volume \
-                    qa-bkup-image /usr/sbin/sshd -D'
-                '''
+				sh 'docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain --name 3366927u-qa-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 --mount source=qa-volume,target=/mnt/qa-volume qa-bkup-image /usr/sbin/sshd -D'
 
 // use bolt command to update the html in qa svr
 				sh '''#!/bin/bash
@@ -81,7 +78,7 @@ pipeline {
 						// run another qa-svr from qa backup image
 						sh '''docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain --name 3366927u-qa-svr \
 		                    --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 --mount source=qa-volume,target=/mnt/qa-volume \
-		                    qa-bkup-image /usr/sbin/sshd -D'
+		                    qa-bkup-image /usr/sbin/sshd -D
 		                '''	
 		//sh 'docker run --rm -v qa-volume:/var/www/html alpine sh -c "rm -f /var/www/html/index.html" '
 		//sh 'docker restart 3366927u-qa-svr'
