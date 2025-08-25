@@ -52,6 +52,7 @@ pipeline {
 			                '''
 			                fallbackScript = 'return ["Rollback"]'
 			            }
+					}
 					v2 = ${params.ACTION}
 					/*
 					v2 = input ( 
