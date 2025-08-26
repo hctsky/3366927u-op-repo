@@ -1,0 +1,150 @@
+pipeline {
+      agent any
+	  environment {
+	      APP_NAME = "3366927u Jenkins Operate Pipeline"
+	      APP_ENV  = "CDV1C04 CWF"
+	  }
+
+      stages {
+          stage('Op-3366927u-S1') {
+	          steps {
+			  	cleanWs()
+
+				// remove qa svr container
+				sh 'docker rm -f 3366927u-qa-svr || true'
+
+				// run another qa-svr from qa backup image
+				sh '''docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain \
+					--name 3366927u-qa-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 \
+					--mount source=qa-volume,target=/mnt/qa-volume qa-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+				'''
+
+				// use bolt command to update the html in qa svr
+				sh '''#!/bin/bash
+					puppet resource file /tmp/clone ensure=absent force=true;
+	                puppet resource file /tmp/clone ensure=directory;
+		   			cd /tmp/clone;
+		   			git clone https://github.com/hctsky/3366927u-op-repo.git;
+	                targets=3366927u-qa-svr.localdomain;
+	                locate_script='/tmp/clone/3366927u-op-repo/3366927u_script';
+	                bolt script run $locate_script -u root -p user123 -t $targets --no-host-key-check --run-as root;
+				'''
+
+	            echo 'Op-3366927u-S1: QA web server is backup and updated'
+
+	          }
+          }
+          stage('Op-3366927u-S2') {
+	          steps {
+				// curl test qa svr
+				echo 'Op-3366927u-S2: Checking on whether QA server is running after update'				
+				sh 'curl -Is http://localhost:33200|head -n 1 > /tmp/qa-result-file'
+				sh 'cat /tmp/qa-result-file'
+	            
+	          }
+          }
+          stage('Op-3366927u-S3') {
+	          steps {
+				// proceed or rollback
+				script {					
+					v2 = input ( 
+		                	message: 'ACTION',
+		                    parameters: [choice(name:'', choices: ['Proceed to Roll out to Prod server', 'Roll back QA server'])]
+						)
+					
+					// if proceed			
+					if (v2 == 'Proceed to Roll out to Prod server'){
+		 				echo 'Op-3366927u-S3: Proceed to roll out to Prod server'
+						}
+					else if (v2 == 'Roll back QA server') {
+						// if rollback, then
+						// execute rollback of qa web svr by using qa-bkup-image
+
+						// remove qa svr container
+						sh 'docker rm -f 3366927u-qa-svr || true'
+						// run another qa-svr from qa backup image
+						sh '''docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain --name 3366927u-qa-svr \
+		                    --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 --mount source=qa-volume,target=/mnt/qa-volume \
+		                    qa-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+		                '''	
+						
+						//sh 'docker restart 3366927u-qa-svr'
+
+						echo 'Op-3366927u-S3: QA server fails after update and is rolled back'
+						// then use error('aborting') to abort rest of steps
+						error('aborting')
+					}
+				}
+	          }
+          }
+          stage('Op-3366927u-S4') {
+	          steps {
+				// remove prod svr container				
+				sh 'docker rm -f 3366927u-prod-svr || true'
+
+				// run another prod-svr from qa backup image
+				sh '''docker run -d -p 33500:80 --network customnetwork -h 3366927u-prod-svr.localdomain \
+					--name 3366927u-prod-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.220 \
+					--mount source=prod-volume,target=/mnt/prod-volume prod-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+				'''
+
+				// use bolt command to update the html in prod svr
+				sh '''#!/bin/bash
+					puppet resource file /tmp/clone ensure=absent force=true;
+	                puppet resource file /tmp/clone ensure=directory;
+		   			cd /tmp/clone;
+		   			git clone https://github.com/hctsky/3366927u-op-repo.git;
+	                targets=3366927u-prod-svr.localdomain;
+	                locate_script='/tmp/clone/3366927u-op-repo/3366927u_script';
+	                bolt script run $locate_script -u root -p user123 -t $targets --no-host-key-check --run-as root;
+				'''
+	            echo 'Op-3366927u-S4: prod web server is backup and updated'
+	          }
+          }
+          stage('Op-3366927u-S5') {
+	          steps {
+					// curl test prod svr
+					echo 'Op-3366927u-S5: Checking on whether Prod server is running after update'
+					sh 'curl -Is http://localhost:33500|head -n 1 > /tmp/prod-result-file'
+					sh 'cat /tmp/prod-result-file'
+	          }
+          }
+          stage('Op-3366927u-S6') {
+	          steps {
+				// proceed or rollback
+				script {					
+					v2 = input ( 
+		                	message: 'ACTION',
+		                    parameters: [choice(name:'', choices: ['Proceed to release Prod web server to production', 'Roll back Prod web server'])]
+						)
+					
+					// if proceed			
+					if (v2 == 'Proceed to release Prod web server to production'){
+	 					echo 'Op-3366927u-S6: Proceed to release Prod web server to production'
+						}
+					else if (v2 == 'Roll back Prod web server') {
+						// if rollback, then
+						// execute rollback of prod web svr by using prod-bkup-image
+
+						// remove prod svr container
+						sh 'docker rm -f 3366927u-prod-svr || true'
+						// run another prod-svr from prod backup image
+						sh '''docker run -d -p 33500:80 --network customnetwork -h 3366927u-prod-svr.localdomain --name 3366927u-prod-svr \
+		                    --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.220 --mount source=prod-volume,target=/mnt/prod-volume \
+		                    prod-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+		                '''	
+						
+						echo 'Op-3366927u-S6: Prod web server is rolled back'
+						// then use error('aborting') to abort rest of steps
+						error('aborting')
+					}
+				}
+	          }
+          }
+          stage('Op-3366927u-S7') {
+	          steps {
+	            echo 'Op-3366927u-S7: Prod web server is monitored and ready to serve'
+	          }
+          }
+	}
+}
