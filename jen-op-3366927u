@@ -85,43 +85,76 @@ pipeline {
           }
           stage('Op-3366927u-S4') {
 	          steps {
+				// remove prod svr container				
+				sh 'docker rm -f 3366927u-prod-svr || true'
 
-// remove prod svr container
-// run another prod-svr from qa backup image
-// use bolt command to update the html in prod svr
-	            	//'''input('Do you want to deploy to Production container?')
-	                echo 'Op-3366927u-S4: prod web server is backup and updated'
+				// run another prod-svr from qa backup image
+				sh '''docker run -d -p 33500:80 --network customnetwork -h 3366927u-prod-svr.localdomain \
+				--name 3366927u-prod-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.220 \
+				--mount source=prod-volume,target=/mnt/prod-volume prod-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+				'''
+
+				// use bolt command to update the html in prod svr
+				sh '''#!/bin/bash
+				puppet resource file /tmp/clone ensure=absent force=true;
+                puppet resource file /tmp/clone ensure=directory;
+	   			cd /tmp/clone;
+	   			git clone https://github.com/hctsky/3366927u-op-repo.git;
+                targets=3366927u-prod-svr.localdomain;
+                locate_script='/tmp/clone/3366927u-op-repo/3366927u_script';
+                bolt script run $locate_script -u root -p user123 -t $targets --no-host-key-check --run-as root;
+				'''
+	            echo 'Op-3366927u-S4: prod web server is backup and updated'
 	          }
           }
           stage('Op-3366927u-S5') {
 	          steps {
-	                 /*
-					 ''' sh '''#!/bin/bash
-	                 ''' targets=puppetclient2.localdomain;
-	                 ''' locate_script='/tmp/clone/cdv1c04-devops_repo/script_to_run';
-	                 ''' bolt script run $locate_script -t $targets -u clientadm -p user123 --no-host-key-check --run-as root;
-	                 '''
-					 */
-// curl test prod svr
-	                 echo "Production container updated"
-	                 echo 'Op-3366927u-S5: Checking on whether Prod server is running after update'
+					// curl test prod svr
+					echo 'Op-3366927u-S5: Checking on whether Prod server is running after update'
+					sh 'curl -Is http://localhost:33500|head -n 1 > /tmp/prod-result-file'
+					sh 'cat /tmp/prod-result-file'
 	          }
           }
           stage('Op-3366927u-S6') {
 	          steps {
-// proceed or rollback
+				// proceed or rollback
+				script {					
+					v2 = input ( 
+	                	message: 'ACTION',
+	                    parameters: [choice(name:'', choices: ['Proceed to release Prod web server to production', 'Roll back Prod web server'])]
+						)
+					
+					// if proceed			
+					if (v2 == 'Proceed to release Prod web server to production'){
+	 					echo 'Op-3366927u-S6: Proceed to release Prod web server to production'
+						}
+					else if (v2 == 'Roll back Prod web server') {
+						// if rollback, then
+						// execute rollback of prod web svr by using prod-bkup-image
 
-// if proceed
-				echo 'Proceed to release Prod web server to production'
-// if rollback
-// execute rollback of prod web svr by using prod-bkup-image
-// then use error('aborting') to abort rest of steps
-	            echo 'Op-3366927u-S6: Prod web server is rolled back'
+						// first, remove index.html file, then replace it with the container default version
+						//sh '''
+                        //docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "rm -f /var/www/html/index.html"
+						//docker run --rm -v qa-volume:/var/www/html qa-bkup-image sh -c "cp /usr/share/apache2/default-site/index.html /var/www/html/index.html"
+						//'''
+
+						// remove prod svr container
+						sh 'docker rm -f 3366927u-prod-svr || true'
+						// run another prod-svr from prod backup image
+						sh '''docker run -d -p 33500:80 --network customnetwork -h 3366927u-prod-svr.localdomain --name 3366927u-prod-svr \
+		                    --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.220 --mount source=prod-volume,target=/mnt/prod-volume \
+		                    prod-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
+		                '''	
+						
+						echo 'Op-3366927u-S6: Prod web server is rolled back'
+						// then use error('aborting') to abort rest of steps
+						error('aborting')
+					}
+				}
 	          }
           }
           stage('Op-3366927u-S7') {
 	          steps {
-	            echo 'Completed updating to Production Container'
 	            echo 'Op-3366927u-S7: Prod web server is monitored and ready to serve'
 	          }
           }
