@@ -11,13 +11,10 @@ pipeline {
 			  	cleanWs()
 
 				// remove qa svr container
-				sh 'docker rm -f 3366927u-qa-svr || true'
+				sh 'docker rmi qa-bkup-image || true'
 
-				// run another qa-svr from qa backup image
-				sh '''docker run -d -p 33200:80 --network customnetwork -h 3366927u-qa-svr.localdomain \
-					--name 3366927u-qa-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.110 \
-					--mount source=qa-volume,target=/mnt/qa-volume qa-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
-				'''
+				// recreate new QA image
+				sh 'docker commit 3366927u-qa-svr qa-bkup-image'
 
 				// use bolt command to update the html in qa svr
 				sh '''#!/bin/bash
@@ -79,14 +76,11 @@ pipeline {
           }
           stage('Op-3366927u-S4') {
 	          steps {
-				// remove prod svr container				
-				sh 'docker rm -f 3366927u-prod-svr || true'
+				// remove prod svr container
+				sh 'docker rmi prod-bkup-image || true'
 
-				// run another prod-svr from qa backup image
-				sh '''docker run -d -p 33500:80 --network customnetwork -h 3366927u-prod-svr.localdomain \
-					--name 3366927u-prod-svr --add-host=sddo-vm.localdomain:172.20.113.173 --ip=192.168.100.220 \
-					--mount source=prod-volume,target=/mnt/prod-volume prod-bkup-image sh -c "/usr/sbin/sshd && apache2ctl -D FOREGROUND"
-				'''
+				// recreate new QA image
+				sh 'docker commit 3366927u-prod-svr prod-bkup-image'
 
 				// use bolt command to update the html in prod svr
 				sh '''#!/bin/bash
